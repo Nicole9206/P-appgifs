@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { SearchGifsResponse, Gif } from '../interface/gifs.interface';
 
 
 @Injectable({
@@ -7,17 +8,24 @@ import { HttpClient } from '@angular/common/http';
 })
 export class GifsService {
   private apiKey: string = 'gf0n9mOJOQEq1WBZkefu7wq3xdYL8hux';
-
+  private servicioUrl: string = 'https://api.giphy.com/v1/gifs';
   private _historial: string[] = [];
-  // TODO: Cambiar any por su tipo
-  public resultados: any[] = [];
+ 
+  public resultados: Gif[] = [];
 
 get historial(){
   
   return [...this._historial];
 }
 
-constructor(private http: HttpClient) {}
+constructor(private http: HttpClient) {
+
+  if(localStorage.getItem('historial')){
+    this._historial = JSON.parse( localStorage.getItem('historial')!) ; //deja el historial aun resfreschando la página en el sidebar
+    this.resultados = JSON.parse( localStorage.getItem('resultados')!) ; 
+  }
+
+}
 
 buscarGifs(query: string){
   query = query.trim().toLocaleLowerCase();// en caso de escribir la misma palabra en minuscula o mayúscula
@@ -26,14 +34,20 @@ buscarGifs(query: string){
   if(!this._historial.includes(query)) {
     this._historial.unshift(query);
     this._historial = this._historial.splice(0,10); // para ingresar un cierto número de datos
+
+    localStorage.setItem('historial', JSON.stringify(this._historial) );//grabando historial en localStorage
+
   }
-  
 
-  this.http.get(`https://api.giphy.com/v1/gifs/search?api_key=gf0n9mOJOQEq1WBZkefu7wq3xdYL8hux&q=${query}&limit=10`)
-
-    .subscribe((resp: any) =>{
-      console.log(resp.data);
+  const params = new HttpParams()
+    .set('api_key', this.apiKey)
+    .set('limit', '10')
+    .set('q', query);
+    
+  this.http.get<SearchGifsResponse>( `${this.servicioUrl}/search`, {params})
+    .subscribe((resp) =>{
       this.resultados = resp.data;
+      localStorage.setItem('resultados', JSON.stringify(this.resultados) );
     });
   /*fetch('https://api.giphy.com/v1/gifs/search?api_key=gf0n9mOJOQEq1WBZkefu7wq3xdYL8hux&q&limit=10')
   .then(resp => {
